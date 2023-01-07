@@ -59,7 +59,7 @@ namespace RawInputCS
             Buffer.AddDirtyRect(new Int32Rect(0, 0, 1280, 720));
             Buffer.Unlock();
         }
-
+        Color[] Colors = { Color.Black, Color.Red, Color.Blue, Color.Green };
         static WriteableBitmap Buffer = new WriteableBitmap(1280, 720, 96, 96, PixelFormats.Bgra32, null);
         Bitmap Drawer = new Bitmap(1280, 720, Buffer.BackBufferStride, System.Drawing.Imaging.PixelFormat.Format32bppRgb, Buffer.BackBuffer);
         readonly Graphics g;
@@ -90,15 +90,16 @@ namespace RawInputCS
                     Draw(() =>
                     {
                         g.Clear(Color.Wheat);
-
+                        int vi = 0;
                         foreach(var i in ps)
                         {
                             System.Drawing.Point p = new System.Drawing.Point(640, 360);
                             p.X += i.X;
                             p.Y += i.Y;
 
-                            using (SolidBrush sb = new SolidBrush(Color.Black))
+                            using (SolidBrush sb = new SolidBrush(Colors[vi]))
                                 g.FillEllipse(sb, new System.Drawing.Rectangle(p.X - 5, p.Y - 5, 10, 10));
+                            vi++;
                         }
                     });
                 };
