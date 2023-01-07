@@ -9,6 +9,11 @@ using namespace std;
 
 map<HANDLE, POINT> Points; //保存鼠标设备的句柄和该鼠标的位置
 
+HWND m_hWnd = NULL;
+HHOOK hHook = NULL;
+HMODULE hModule = NULL;
+LRESULT CALLBACK GetMessageProc(int nCode, WPARAM wParam, LPARAM lParam);
+
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
                        LPVOID lpReserved
@@ -17,6 +22,8 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     switch (ul_reason_for_call)
     {
     case DLL_PROCESS_ATTACH:
+        ::hModule = hModule;
+        break;
     case DLL_THREAD_ATTACH:
     case DLL_THREAD_DETACH:
     case DLL_PROCESS_DETACH:
@@ -37,6 +44,7 @@ DLLAPI void Test()
 /// <returns></returns>
 DLLAPI void RawRegister(HWND hWnd)
 {
+    m_hWnd = hWnd;
     RAWINPUTDEVICE Rid[1];
 
     Rid[0].usUsagePage = 0x01;  //设备类型为鼠标       
@@ -54,55 +62,8 @@ DLLAPI void RawRegister(HWND hWnd)
         int Sk = GetLastError();
         MsgBox("Failed");
     }
-}
 
-/// <summary>
-/// 窗口回调函数
-/// </summary>
-/// <param name="hWnd">窗口句柄</param>
-/// <param name="uMsg">消息</param>
-/// <param name="wParam">宽参数</param>
-/// <param name="lParam">长参数</param>
-/// <returns></returns>
-DLLAPI LRESULT WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-    switch (uMsg)
-    {
-        // print out the values that I need
-    case WM_INPUT: { //只处理WM_INPUT消息
-        UINT dataSize;
-        GetRawInputData(reinterpret_cast<HRAWINPUT>(lParam), RID_INPUT, NULL, &dataSize, sizeof(RAWINPUTHEADER)); //Need to populate data size first
-        //获取数据的大小      
-        if (dataSize > 0) //如果数据不为空则处理数据
-        {
-            std::vector<BYTE> rawdata(dataSize);
-            //vector容器避免内存泄漏，懒得释放指针
-
-            //获取数据
-            if (GetRawInputData(reinterpret_cast<HRAWINPUT>(lParam), RID_INPUT, rawdata.data(), &dataSize, sizeof(RAWINPUTHEADER)) == dataSize)
-            {
-                RAWINPUT* raw = reinterpret_cast<RAWINPUT*>(rawdata.data());
-
-                if (raw->header.dwType == RIM_TYPEMOUSE) //如果接收到的是鼠标消息
-                {
-                    if (Points.count(raw->header.hDevice) == 0)  //如果map中不存在该鼠标句柄，则说明是一个新的鼠标，将其插入map中
-                        Points.insert({ raw->header.hDevice, { 0,0 } });
-
-
-                    POINT new_point = { Points[raw->header.hDevice].x,Points[raw->header.hDevice].y };
-                    new_point.x += raw->data.mouse.lLastX;
-                    new_point.y += raw->data.mouse.lLastY;
-                    //将map中保存的鼠标位置，和本次消息中获取到的鼠标位移相加，然后更新map中保存的值
-                    Points[raw->header.hDevice] = new_point;
-
-                }
-            }
-        }
-        return 0;
-    }
-    }
-
-    return DefWindowProc(hWnd, uMsg, wParam, lParam);
+    hHook = SetWindowsHookEx(WH_GETMESSAGE, GetMessageProc, hModule, 0);
 }
 
 /// <summary>
@@ -137,4 +98,50 @@ DLLAPI int GetData(int Index, int XY)
     }
 
     return 0;
+}
+
+LRESULT CALLBACK GetMessageProc(int nCode, WPARAM wParam, LPARAM lParam)
+{
+    LPMSG pMsg = (LPMSG)lParam;
+    if (pMsg->hwnd != m_hWnd) return CallNextHookEx(hHook, nCode, wParam, lParam);
+
+    switch (pMsg->message)
+    {
+        // print out the values that I need
+    case WM_INPUT: { //只处理WM_INPUT消息
+        UINT dataSize;
+        GetRawInputData(reinterpret_cast<HRAWINPUT>(pMsg->lParam),
+            RID_INPUT, NULL, &dataSize, sizeof(RAWINPUTHEADER));
+        //Need to populate data size first
+        //获取数据的大小      
+        if (dataSize > 0) //如果数据不为空则处理数据
+        {
+            std::vector<BYTE> rawdata(dataSize);
+            //vector容器避免内存泄漏，懒得释放指针
+
+            //获取数据
+            if (GetRawInputData(reinterpret_cast<HRAWINPUT>(pMsg->lParam), RID_INPUT, rawdata.data(), &dataSize, sizeof(RAWINPUTHEADER)) == dataSize)
+            {
+                RAWINPUT* raw = reinterpret_cast<RAWINPUT*>(rawdata.data());
+
+                if (raw->header.dwType == RIM_TYPEMOUSE) //如果接收到的是鼠标消息
+                {
+                    if (Points.count(raw->header.hDevice) == 0)  //如果map中不存在该鼠标句柄，则说明是一个新的鼠标，将其插入map中
+                        Points.insert({ raw->header.hDevice, { 0,0 } });
+
+
+                    POINT new_point = { Points[raw->header.hDevice].x,Points[raw->header.hDevice].y };
+                    new_point.x += raw->data.mouse.lLastX;
+                    new_point.y += raw->data.mouse.lLastY;
+                    //将map中保存的鼠标位置，和本次消息中获取到的鼠标位移相加，然后更新map中保存的值
+                    Points[raw->header.hDevice] = new_point;
+
+                }
+            }
+        }
+        return 0;
+    }
+    }
+
+    return CallNextHookEx(hHook, nCode, wParam, lParam);
 }
