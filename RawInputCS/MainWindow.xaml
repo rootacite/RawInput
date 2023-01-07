@@ -7,6 +7,11 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="720" Width="1280">
     <Grid>
-        <Image x:Name="Plant" HorizontalAlignment="Left" Height="720" Margin="0,0,0,0" VerticalAlignment="Top" Width="1280" Stretch="Fill"/>
+        <Viewbox Stretch="Uniform">
+            <Canvas Height="720" Width="1280">
+                <Image x:Name="Plant" HorizontalAlignment="Left" Height="720" Margin="0,0,0,0" VerticalAlignment="Top" Width="1280" Stretch="Fill"/>
+
+            </Canvas>
+        </Viewbox>
     </Grid>
 </Window>
