@@ -48,7 +48,7 @@ DLLAPI void RawRegister(HWND hWnd)
     RAWINPUTDEVICE Rid[1];
 
     Rid[0].usUsagePage = 0x01;  //设备类型为鼠标       
-    Rid[0].usUsage = 0x02;              
+    Rid[0].usUsage = 0x02;               
     Rid[0].dwFlags = RIDEV_INPUTSINK; //RIDEV_INPUTSINK参数让程序可以后台运行
     Rid[0].hwndTarget = hWnd;   
 
