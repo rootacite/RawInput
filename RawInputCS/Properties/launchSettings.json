@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "RawInputCS": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}
