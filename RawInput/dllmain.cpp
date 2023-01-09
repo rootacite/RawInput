@@ -11,8 +11,14 @@ map<HANDLE, POINT> Points; //保存鼠标设备的句柄和该鼠标的位置
 
 HWND m_hWnd = NULL;
 HHOOK hHook = NULL;
+HHOOK hMouse = NULL;
 HMODULE hModule = NULL;
 LRESULT CALLBACK GetMessageProc(int nCode, WPARAM wParam, LPARAM lParam);
+
+LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam)
+{
+    return TRUE;
+}
 
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
@@ -25,8 +31,14 @@ BOOL APIENTRY DllMain( HMODULE hModule,
         ::hModule = hModule;
         break;
     case DLL_THREAD_ATTACH:
+        break;
     case DLL_THREAD_DETACH:
+        break;
     case DLL_PROCESS_DETACH:
+        if(hMouse)
+        UnhookWindowsHookEx(hMouse);
+        if(hHook)
+        UnhookWindowsHookEx(hHook);
         break;
     }
     return TRUE;
@@ -63,6 +75,7 @@ DLLAPI void RawRegister(HWND hWnd)
         MsgBox("Failed");
     }
 
+    hMouse = SetWindowsHookEx(WH_MOUSE_LL, MouseProc, hModule, 0);
     hHook = SetWindowsHookEx(WH_GETMESSAGE, GetMessageProc, hModule, 0);
 }
 
